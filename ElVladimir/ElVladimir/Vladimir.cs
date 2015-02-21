@@ -52,11 +52,9 @@ namespace ElVladimir
 
             #endregion
 
-            //subscribe to event
             Game.OnGameUpdate += OnGameUpdate;
             Drawing.OnDraw += Drawing_OnDraw;
             AntiGapcloser.OnEnemyGapcloser += AntiGapcloser_OnEnemyGapcloser;
-
         }
 
         #region OnGameUpdate
@@ -82,7 +80,8 @@ namespace ElVladimir
             if (_menu.Item("EStack", true).GetValue<KeyBind>().Active)
             {
                 if (Environment.TickCount - E.LastCastAttemptT >= 9900 && E.IsReady() &&
-                (Player.Health / Player.MaxHealth) * 100 >= _menu.Item("EStackHP").GetValue<Slider>().Value)
+                (Player.Health / Player.MaxHealth) * 100 >= 
+                _menu.Item("EStackHP").GetValue<Slider>().Value)
                     E.Cast();
             }
         }
@@ -104,7 +103,6 @@ namespace ElVladimir
             var eCombo = _menu.Item("ECombo").GetValue<bool>();
             var rCombo = _menu.Item("RCombo").GetValue<bool>();
             var ultCount = _menu.Item("rcount").GetValue<Slider>().Value;
-
 
             foreach (var spell in SpellList.Where(x => x.IsReady()))
             {
@@ -288,7 +286,6 @@ namespace ElVladimir
             waveClearMenu.AddItem(new MenuItem("WaveClearQ", "Use Q").SetValue(true));
             waveClearMenu.AddItem(new MenuItem("WaveClearE", "Use E").SetValue(true));
             waveClearMenu.SubMenu("LaneClearHealth").AddItem(new MenuItem("LaneClearHealth", "[WaveClear] Minimum Health for E").SetValue(new Slider(20, 0, 100)));
-
             waveClearMenu.AddItem(new MenuItem("WaveClearActive", "WaveClear!").SetValue(new KeyBind("V".ToCharArray()[0], KeyBindType.Press)));
 
             //Misc
