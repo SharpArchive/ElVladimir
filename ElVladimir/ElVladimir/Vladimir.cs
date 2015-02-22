@@ -32,7 +32,7 @@ namespace ElVladimir
                 return;
 
             Console.WriteLine("ElVlad injected");
-            AddNotification("ElVladimir by jQuery v1.1");
+            Notifications.AddNotification("ElVladimir by jQuery v1.2 loaded", 5);
 
             #region Spell Data
 
@@ -84,6 +84,64 @@ namespace ElVladimir
                 _menu.Item("EStackHP").GetValue<Slider>().Value)
                     E.Cast();
             }
+
+            if (_menu.Item("AutoHarass", true).GetValue<KeyBind>().Active)
+            {
+                var target = TargetSelector.GetTarget(W.Range, TargetSelector.DamageType.Magical);
+                if (target == null || !target.IsValid)
+                {
+                    return;
+                }
+
+                var qAutoHarass = _menu.Item("UseQAutoHarass").GetValue<bool>();
+                var eAutoHarass = _menu.Item("UseEAutoHarass").GetValue<bool>();
+
+                foreach (var spell in SpellList.Where(z => z.IsReady()))
+                {
+                    if (spell.Slot == SpellSlot.Q && qAutoHarass && Q.IsReady())
+                    {
+                        Q.Cast(target);
+                    }
+
+                    if (spell.Slot == SpellSlot.E && eAutoHarass && E.IsReady() && Player.Distance(target) <= E.Range 
+                        && (Player.Health / Player.MaxHealth) * 100 >= _menu.Item("HarassHP").GetValue<Slider>().Value)
+                    {
+                        E.Cast(target);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+
+        #region GetComboDamage   
+
+        private static float GetComboDamage(Obj_AI_Base enemy)
+        {
+            var damage = 0d;
+
+            if (Q.IsReady())
+            {
+                damage += Player.GetSpellDamage(enemy, SpellSlot.Q);
+            }
+
+            if (W.IsReady())
+            {
+                damage += Player.GetSpellDamage(enemy, SpellSlot.W);
+            }
+
+            if (E.IsReady())
+            {
+                damage += Player.GetSpellDamage(enemy, SpellSlot.E);
+            }
+
+            if (R.IsReady())
+            {
+                damage += Player.GetSpellDamage(enemy, SpellSlot.R);
+            }
+
+            return (float)damage;
         }
 
         #endregion
@@ -102,7 +160,10 @@ namespace ElVladimir
             var wCombo = _menu.Item("WCombo").GetValue<bool>();
             var eCombo = _menu.Item("ECombo").GetValue<bool>();
             var rCombo = _menu.Item("RCombo").GetValue<bool>();
+            var onlyKill = _menu.Item("RWhenKill").GetValue<bool>();
             var ultCount = _menu.Item("rcount").GetValue<Slider>().Value;
+
+            var comboDamage = GetComboDamage(target);
 
             foreach (var spell in SpellList.Where(x => x.IsReady()))
             {
@@ -111,9 +172,18 @@ namespace ElVladimir
                 {
                     Q.Cast(target);
                 }
+                
+                //only kill with ult
+                if (onlyKill && E.IsReady() && rCombo && Q.IsReady() && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
+                {
+                    if (comboDamage >= target.Health)
+                    {
+                        R.CastOnUnit(target);
+                    }
+                }
 
-                if (spell.Slot == SpellSlot.R && rCombo && R.IsReady()
-                   && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
+                //not active
+                if (!onlyKill && E.IsReady() && rCombo && Q.IsReady() && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
                 {
                     R.CastOnUnit(target);
                 }
@@ -138,7 +208,7 @@ namespace ElVladimir
 
         #endregion
 
-        #region Combo
+        #region Harass
 
         private static void Harass()
         {
@@ -190,16 +260,6 @@ namespace ElVladimir
         }
 
         #endregion  
-
-        #region Notification
-
-        private static void AddNotification(String text)
-        {
-            var notification = new Notification(text, 10000);
-            Notifications.AddNotification(notification);
-        }
-
-        #endregion
 
         #region Ignite
 
@@ -272,13 +332,23 @@ namespace ElVladimir
             comboMenu.AddItem(new MenuItem("RCombo", "Use R").SetValue(true));
             comboMenu.AddItem(new MenuItem("fsfsafsaasffsa", ""));
             comboMenu.AddItem(new MenuItem("rcount", "Min target to R >= ")).SetValue(new Slider(1, 1, 5));
+            comboMenu.AddItem(new MenuItem("RWhenKill", "Use R only when killable").SetValue(true));
+            comboMenu.AddItem(new MenuItem("fsfsafsaasffs1111a", ""));
             comboMenu.AddItem(new MenuItem("UseIgnite", "Use Ignite in combo when killable").SetValue(true));
             comboMenu.AddItem(new MenuItem("ComboActive", "Combo!").SetValue(new KeyBind(32, KeyBindType.Press)));
            
             //Harass
             var harassMenu = _menu.AddSubMenu(new Menu("Harass", "H"));
+            harassMenu.AddItem(new MenuItem("fsfsafsaasffsaxxxs", ""));
             harassMenu.AddItem(new MenuItem("HarassQ", "Use Q").SetValue(true));
             harassMenu.AddItem(new MenuItem("HarassE", "Use E").SetValue(true));
+
+            //submenu harass
+            harassMenu.SubMenu("AutoHarass").AddItem(new MenuItem("HarassHP", "[Auto harass] Minimum Health for E").SetValue(new Slider(20, 0, 100)));
+            harassMenu.SubMenu("AutoHarass").AddItem(new MenuItem("AutoHarass", "[Toggle] Auto harass", true).SetValue(new KeyBind("L".ToCharArray()[0], KeyBindType.Toggle)));
+            harassMenu.SubMenu("AutoHarass").AddItem(new MenuItem("spacespacespace", ""));
+            harassMenu.SubMenu("AutoHarass").AddItem(new MenuItem("UseQAutoHarass", "Use Q").SetValue(true));
+            harassMenu.SubMenu("AutoHarass").AddItem(new MenuItem("UseEAutoHarass", "Use E").SetValue(true));
 
             //Waveclear
             var waveClearMenu = _menu.AddSubMenu(new Menu("WaveClear", "waveclear"));
