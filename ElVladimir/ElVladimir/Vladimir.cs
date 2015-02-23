@@ -146,6 +146,23 @@ namespace ElVladimir
 
         #endregion
 
+        //new logic such OP 
+        #region GetUltComboDamage   
+
+        private static float GetUltComboDamage(Obj_AI_Base enemy)
+        {
+            var damage = 0d;
+
+            if (R.IsReady())
+            {
+                damage += Player.GetSpellDamage(enemy, SpellSlot.R);
+            }
+
+            return (float)damage;
+        }
+
+        #endregion
+
         #region Combo
 
         private static void Combo()
@@ -162,8 +179,12 @@ namespace ElVladimir
             var rCombo = _menu.Item("RCombo").GetValue<bool>();
             var onlyKill = _menu.Item("RWhenKill").GetValue<bool>();
             var ultCount = _menu.Item("rcount").GetValue<Slider>().Value;
+            var smartUlt = _menu.Item("SmartUlt").GetValue<bool>();
+
 
             var comboDamage = GetComboDamage(target);
+            var getUltComboDamage = GetUltComboDamage(target);
+
 
             foreach (var spell in SpellList.Where(x => x.IsReady()))
             {
@@ -179,6 +200,15 @@ namespace ElVladimir
                     if (comboDamage >= target.Health)
                     {
                         R.CastOnUnit(target);
+                    }
+                }
+
+                // When fighting and target can we killed with ult it will ult
+                if (onlyKill && R.IsReady() && smartUlt)
+                {
+                    if (getUltComboDamage >= target.Health)
+                    {
+                        R.CastOnUnit(Player);
                     }
                 }
 
@@ -333,6 +363,7 @@ namespace ElVladimir
             comboMenu.AddItem(new MenuItem("fsfsafsaasffsa", ""));
             comboMenu.AddItem(new MenuItem("rcount", "Min target to R >= ")).SetValue(new Slider(1, 1, 5));
             comboMenu.AddItem(new MenuItem("RWhenKill", "Use R only when killable").SetValue(true));
+            comboMenu.AddItem(new MenuItem("SmartUlt", "Use smart ult").SetValue(true));
             comboMenu.AddItem(new MenuItem("fsfsafsaasffs1111a", ""));
             comboMenu.AddItem(new MenuItem("UseIgnite", "Use Ignite in combo when killable").SetValue(true));
             comboMenu.AddItem(new MenuItem("ComboActive", "Combo!").SetValue(new KeyBind(32, KeyBindType.Press)));
