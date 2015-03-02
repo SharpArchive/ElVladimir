@@ -316,24 +316,30 @@ namespace ElVladimir
 
         private static void Drawing_OnDraw(EventArgs args)
         {
-            if (_menu.Item("Drawingsoff").GetValue<bool>())
+            var drawOff = _menu.Item("ElVladimir.Drawingsoff").GetValue<bool>();
+            var drawQ = _menu.Item("ElVladimir.DrawQ").GetValue<Circle>();
+            var drawW = _menu.Item("ElVladimir.DrawW").GetValue<Circle>();
+            var drawE = _menu.Item("ElVladimir.DrawW").GetValue<Circle>();
+            var drawR = _menu.Item("ElVladimir.DrawR").GetValue<Circle>();
+
+            if (drawOff)
                 return;
 
-            if (_menu.Item("DrawQ").GetValue<bool>())
+            if (drawQ.Active)
                 if (Q.Level > 0)
-                    Utility.DrawCircle(Player.Position, Q.Range, Q.IsReady() ? Color.Green : Color.Red);
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, Q.Range,Q.IsReady() ? Color.Green : Color.Red);
 
-            if (_menu.Item("DrawW").GetValue<bool>())
+            if (drawW.Active)
                 if (W.Level > 0)
-                    Utility.DrawCircle(Player.Position, W.Range, W.IsReady() ? Color.Green : Color.Red);
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, W.Range, W.IsReady() ? Color.Green : Color.Red);
 
-            if (_menu.Item("DrawE").GetValue<bool>())
+            if (drawE.Active)
                 if (E.Level > 0)
-                    Utility.DrawCircle(Player.Position, E.Range, E.IsReady() ? Color.Green : Color.Red);
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, E.Range, E.IsReady() ? Color.Green : Color.Red);
 
-            if (_menu.Item("DrawR").GetValue<bool>())
-                if (E.Level > 0)
-                    Utility.DrawCircle(Player.Position, R.Range, R.IsReady() ? Color.Green : Color.Red);
+            if (drawR.Active)
+                if (R.Level > 0)
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, R.Range, R.IsReady() ? Color.Green : Color.Red);
         }
 
         #endregion
@@ -391,11 +397,11 @@ namespace ElVladimir
 
             //Misc
             var miscMenu = _menu.AddSubMenu(new Menu("Drawings", "Misc"));
-            miscMenu.AddItem(new MenuItem("Drawingsoff", "Drawings off").SetValue(false));
-            miscMenu.AddItem(new MenuItem("DrawQ", "Draw Q").SetValue(true));
-            miscMenu.AddItem(new MenuItem("DrawW", "Draw W").SetValue(true));
-            miscMenu.AddItem(new MenuItem("DrawE", "Draw E").SetValue(true));
-            miscMenu.AddItem(new MenuItem("DrawR", "Draw R").SetValue(true));
+            miscMenu.AddItem(new MenuItem("ElVladimir.Drawingsoff", "Drawings off").SetValue(false));
+            miscMenu.AddItem(new MenuItem("ElVladimir.DrawQ", "Draw Q").SetValue(new Circle()));
+            miscMenu.AddItem(new MenuItem("ElVladimir.DrawW", "Draw W").SetValue(new Circle()));
+            miscMenu.AddItem(new MenuItem("ElVladimir.DrawE", "Draw E").SetValue(new Circle()));
+            miscMenu.AddItem(new MenuItem("ElVladimir.DrawR", "Draw R").SetValue(new Circle()));
 
             // Settings
             var settingsMenu = _menu.AddSubMenu(new Menu("Settings", "Settings"));
@@ -407,11 +413,12 @@ namespace ElVladimir
 
             //Here comes the moneyyy, money, money, moneyyyy
             var credits = _menu.AddSubMenu(new Menu("Credits", "jQuery"));
-            credits.AddItem(new MenuItem("Thanks", "Powered by:"));
-            credits.AddItem(new MenuItem("jQuery", "jQuery"));
-            credits.AddItem(new MenuItem("fassfassf", ""));
-            credits.AddItem(new MenuItem("Paypal", "Paypal:"));
-            credits.AddItem(new MenuItem("Email", "info@zavox.nl"));
+            credits.AddItem(new MenuItem("ElKennen.Paypal", "if you would like to donate via paypal:"));
+            credits.AddItem(new MenuItem("Elkennen.Email", "info@zavox.nl"));
+
+            _menu.AddItem(new MenuItem("422442fsaafs4242f", ""));
+            _menu.AddItem(new MenuItem("422442fsaafsf", "Version: 1.4"));
+            _menu.AddItem(new MenuItem("fsasfafsfsafsa", "Made By jQuery"));
 
             _menu.AddToMainMenu();
         }
