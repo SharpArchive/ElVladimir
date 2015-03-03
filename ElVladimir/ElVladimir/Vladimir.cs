@@ -188,14 +188,13 @@ namespace ElVladimir
 
             foreach (var spell in SpellList.Where(x => x.IsReady()))
             {
-
-                if (spell.Slot == SpellSlot.Q && qCombo && Q.IsReady())
+                if (qCombo && (Player.Distance(target) <= Player.AttackRange))
                 {
                     Q.Cast(target);
                 }
                 
                 //only kill with ult
-                if (onlyKill && E.IsReady() && rCombo && Q.IsReady() && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
+                if (onlyKill && E.IsReady() && rCombo &&  ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
                 {
                     if (comboDamage >= target.Health)
                     {
@@ -204,7 +203,7 @@ namespace ElVladimir
                 }
 
                 // When fighting and target can we killed with ult it will ult
-                if (onlyKill && R.IsReady() && smartUlt)
+                if (onlyKill && smartUlt)
                 {
                     if (getUltComboDamage >= target.Health)
                     {
@@ -213,7 +212,7 @@ namespace ElVladimir
                 }
 
                 //not active
-                if (!onlyKill && E.IsReady() && rCombo && Q.IsReady() && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
+                if (!onlyKill && E.IsReady() && rCombo &&  ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
                 {
                     R.CastOnUnit(target);
                 }
