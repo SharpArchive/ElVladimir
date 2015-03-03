@@ -61,14 +61,16 @@ namespace ElVladimir
 
         private static void OnGameUpdate(EventArgs args)
         {
+            var target = TargetSelector.GetTarget(W.Range, TargetSelector.DamageType.Magical);
+
             switch (_orbwalker.ActiveMode)
             {
                case Orbwalking.OrbwalkingMode.Combo:
-                    Combo();
+                    Combo(target);
                 break;
 
                 case Orbwalking.OrbwalkingMode.Mixed:
-                    Harass();
+                    Harass(target);
                 break;
 
                 case Orbwalking.OrbwalkingMode.LaneClear:
@@ -87,7 +89,6 @@ namespace ElVladimir
 
             if (_menu.Item("AutoHarass", true).GetValue<KeyBind>().Active)
             {
-                var target = TargetSelector.GetTarget(W.Range, TargetSelector.DamageType.Magical);
                 if (target == null || !target.IsValid)
                 {
                     return;
@@ -165,9 +166,9 @@ namespace ElVladimir
 
         #region Combo
 
-        private static void Combo()
+        private static void Combo(Obj_AI_Hero target)
         {
-            var target = TargetSelector.GetTarget(W.Range, TargetSelector.DamageType.Magical);
+            
             if (target == null || !target.IsValid)
             {
                 return;
@@ -184,7 +185,6 @@ namespace ElVladimir
 
             var comboDamage = GetComboDamage(target);
             var getUltComboDamage = GetUltComboDamage(target);
-
 
             foreach (var spell in SpellList.Where(x => x.IsReady()))
             {
@@ -208,7 +208,7 @@ namespace ElVladimir
                 {
                     if (getUltComboDamage >= target.Health)
                     {
-                        R.CastOnUnit(Player);
+                        R.CastOnUnit(target);
                     }
                 }
 
@@ -240,9 +240,8 @@ namespace ElVladimir
 
         #region Harass
 
-        private static void Harass()
+        private static void Harass(Obj_AI_Base target)
         {
-            var target = TargetSelector.GetTarget(W.Range, TargetSelector.DamageType.Magical);
             if (target == null || !target.IsValid)
             {
                 return;
@@ -417,7 +416,7 @@ namespace ElVladimir
             credits.AddItem(new MenuItem("Elkennen.Email", "info@zavox.nl"));
 
             _menu.AddItem(new MenuItem("422442fsaafs4242f", ""));
-            _menu.AddItem(new MenuItem("422442fsaafsf", "Version: 1.4"));
+            _menu.AddItem(new MenuItem("422442fsaafsf", "Version: 2.4"));
             _menu.AddItem(new MenuItem("fsasfafsfsafsa", "Made By jQuery"));
 
             _menu.AddToMainMenu();
