@@ -194,11 +194,11 @@ namespace ElVladimir
                 }
                 
                 //only kill with ult
-                if (onlyKill && E.IsReady() && rCombo &&  ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
+                if (onlyKill && E.IsReady() && rCombo && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
                 {
                     if (comboDamage >= target.Health)
                     {
-                        R.CastOnUnit(target);
+                        R.Cast(target);
                     }
                 }
 
@@ -207,14 +207,14 @@ namespace ElVladimir
                 {
                     if (getUltComboDamage >= target.Health)
                     {
-                        R.CastOnUnit(target);
+                        R.Cast(target);
                     }
                 }
 
                 //not active
                 if (!onlyKill && E.IsReady() && rCombo &&  ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
                 {
-                    R.CastOnUnit(target);
+                    R.Cast(target);
                 }
 
                 if (spell.Slot == SpellSlot.E && eCombo && E.IsReady() && Player.Distance(target) <= E.Range)
@@ -224,7 +224,7 @@ namespace ElVladimir
 
                 if (spell.Slot == SpellSlot.W && wCombo && W.IsReady())
                 {
-                    W.CastOnUnit(Player);
+                    W.Cast(Player);
                 }
             }
 
