@@ -11,48 +11,50 @@ using Color = System.Drawing.Color;
 
 namespace ElVladimir
 {
-    /// <summary>
-    ///     Handle all stuff what is going on with Vladimir.
-    /// </summary>
+    internal enum Spells
+    {
+        Q,
+        W,
+        E,
+        R
+    }
+
     internal class Vladimir
     {
-        private static String hero = "Vladimir";
         private static Obj_AI_Hero Player { get { return ObjectManager.Player; } }
         private static Menu _menu;
         private static Orbwalking.Orbwalker _orbwalker;
-        private static Spell Q, W, E, R;
         private static List<Spell> SpellList;
 
          // Summoner spells
         private static SpellSlot Ignite;
+        public static Dictionary<Spells, Spell> spells = new Dictionary<Spells, Spell>()
+        {
+            { Spells.Q, new Spell(SpellSlot.Q, 600)},
+            { Spells.W, new Spell(SpellSlot.W)},
+            { Spells.E, new Spell(SpellSlot.E, 610)},
+            { Spells.R, new Spell(SpellSlot.R, 625)}
+        };
 
         public static void Game_OnGameLoad(EventArgs args)
         {
-            if (ObjectManager.Player.BaseSkinName != hero)
+            if (ObjectManager.Player.BaseSkinName != "Vladimir")
                 return;
 
-            Console.WriteLine("ElVlad injected");
-            Notifications.AddNotification("ElVladimir by jQuery v1.2 loaded", 5);
+            Notifications.AddNotification("ElVladimir by jQuery 3.0.0.0", 5000);
 
             #region Spell Data
 
-            // set spells
-            Q = new Spell(SpellSlot.Q, 600);
-            W = new Spell(SpellSlot.W);
-            E = new Spell(SpellSlot.E, 610);
-            R = new Spell(SpellSlot.R, 625);
-
-            R.SetSkillshot(0.25f, 175, 700, false, SkillshotType.SkillshotCircle);
-            SpellList = new List<Spell> { Q, E, W, R };
-
-            // Ignite
+            spells[Spells.R].SetSkillshot(0.25f, 175, 700, false, SkillshotType.SkillshotCircle);
             Ignite = Player.GetSpellSlot("summonerdot");
 
             InitializeMenu();
 
             #endregion
 
-            Game.OnGameUpdate += OnGameUpdate;
+            Console.WriteLine("Injected");
+
+            Game.OnUpdate += OnGameUpdate;
             Drawing.OnDraw += Drawing_OnDraw;
             AntiGapcloser.OnEnemyGapcloser += AntiGapcloser_OnEnemyGapcloser;
         }
@@ -61,16 +63,15 @@ namespace ElVladimir
 
         private static void OnGameUpdate(EventArgs args)
         {
-            var target = TargetSelector.GetTarget(W.Range, TargetSelector.DamageType.Magical);
 
             switch (_orbwalker.ActiveMode)
             {
                case Orbwalking.OrbwalkingMode.Combo:
-                    Combo(target);
+                    Combo();
                 break;
 
                 case Orbwalking.OrbwalkingMode.Mixed:
-                    Harass(target);
+                    Harass();
                 break;
 
                 case Orbwalking.OrbwalkingMode.LaneClear:
@@ -78,43 +79,57 @@ namespace ElVladimir
                 break;
             }
 
-            if (Player.HasBuff("Recall") || Utility.InFountain(Player)) return;
+            if (_menu.Item("ElVladimir.Lasthit").GetValue<KeyBind>().Active)
+            {
+                var allMinions = MinionManager.GetMinions(ObjectManager.Player.ServerPosition, spells[Spells.Q].Range);
+                {
+                    foreach (
+                        var minion in
+                            allMinions.Where(
+                                minion => minion.Health <= ObjectManager.Player.GetSpellDamage(minion, SpellSlot.Q)))
+                    {
+                        if (minion.IsValidTarget())
+                        {
+                            spells[Spells.Q].CastOnUnit(minion);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (Player.IsRecalling() || Player.InFountain()) return;
             if (_menu.Item("EStack", true).GetValue<KeyBind>().Active)
             {
-                if (Environment.TickCount - E.LastCastAttemptT >= 9900 && E.IsReady() &&
+                if (Environment.TickCount - spells[Spells.E].LastCastAttemptT >= 9900 && spells[Spells.E].IsReady() &&
                 (Player.Health / Player.MaxHealth) * 100 >= 
                 _menu.Item("EStackHP").GetValue<Slider>().Value)
-                    E.Cast();
+                    spells[Spells.E].Cast();
             }
+
+            var target = TargetSelector.GetTarget(spells[Spells.Q].Range, TargetSelector.DamageType.Magical);
 
             if (_menu.Item("AutoHarass", true).GetValue<KeyBind>().Active)
             {
                 if (target == null || !target.IsValid)
-                {
                     return;
-                }
 
                 var qAutoHarass = _menu.Item("UseQAutoHarass").GetValue<bool>();
                 var eAutoHarass = _menu.Item("UseEAutoHarass").GetValue<bool>();
 
-                foreach (var spell in SpellList.Where(z => z.IsReady()))
+                if (qAutoHarass && spells[Spells.Q].IsReady())
                 {
-                    if (spell.Slot == SpellSlot.Q && qAutoHarass && Q.IsReady())
-                    {
-                        Q.Cast(target);
-                    }
+                    spells[Spells.Q].Cast(target);
+                }
 
-                    if (spell.Slot == SpellSlot.E && eAutoHarass && E.IsReady() && Player.Distance(target) <= E.Range 
-                        && (Player.Health / Player.MaxHealth) * 100 >= _menu.Item("HarassHP").GetValue<Slider>().Value)
-                    {
-                        E.Cast(target);
-                    }
+                if (eAutoHarass && spells[Spells.E].IsReady() && Player.Distance(target) <= spells[Spells.E].Range 
+                    && (Player.Health / Player.MaxHealth) * 100 >= _menu.Item("HarassHP").GetValue<Slider>().Value)
+                {
+                    spells[Spells.E].Cast(target);
                 }
             }
         }
 
         #endregion
-
 
         #region GetComboDamage   
 
@@ -122,22 +137,22 @@ namespace ElVladimir
         {
             var damage = 0d;
 
-            if (Q.IsReady())
+            if (spells[Spells.Q].IsReady())
             {
                 damage += Player.GetSpellDamage(enemy, SpellSlot.Q);
             }
 
-            if (W.IsReady())
+            if (spells[Spells.W].IsReady())
             {
                 damage += Player.GetSpellDamage(enemy, SpellSlot.W);
             }
 
-            if (E.IsReady())
+            if (spells[Spells.E].IsReady())
             {
                 damage += Player.GetSpellDamage(enemy, SpellSlot.E);
             }
 
-            if (R.IsReady())
+            if (spells[Spells.R].IsReady())
             {
                 damage += Player.GetSpellDamage(enemy, SpellSlot.R);
             }
@@ -154,7 +169,7 @@ namespace ElVladimir
         {
             var damage = 0d;
 
-            if (R.IsReady())
+            if (spells[Spells.R].IsReady())
             {
                 damage += Player.GetSpellDamage(enemy, SpellSlot.R);
             }
@@ -166,68 +181,58 @@ namespace ElVladimir
 
         #region Combo
 
-        private static void Combo(Obj_AI_Hero target)
+        private static void Combo()
         {
-            
+            var target = TargetSelector.GetTarget(spells[Spells.Q].Range, TargetSelector.DamageType.Magical);
             if (target == null || !target.IsValid)
-            {
                 return;
-            }
 
-            var qCombo = _menu.Item("QCombo").GetValue<bool>();
-            var wCombo = _menu.Item("WCombo").GetValue<bool>();
-            var eCombo = _menu.Item("ECombo").GetValue<bool>();
+            var useQ = _menu.Item("QCombo").GetValue<bool>();
+            var useW = _menu.Item("WCombo").GetValue<bool>();
+            var useE = _menu.Item("ECombo").GetValue<bool>();
             var rCombo = _menu.Item("RCombo").GetValue<bool>();
             var onlyKill = _menu.Item("RWhenKill").GetValue<bool>();
             var ultCount = _menu.Item("rcount").GetValue<Slider>().Value;
             var smartUlt = _menu.Item("SmartUlt").GetValue<bool>();
-
-
             var comboDamage = GetComboDamage(target);
             var getUltComboDamage = GetUltComboDamage(target);
 
-            foreach (var spell in SpellList.Where(x => x.IsReady()))
+            if (useQ && target.IsValidTarget())
             {
-                if (qCombo && (Player.Distance(target) <= Player.AttackRange))
-                {
-                    Q.Cast(target);
-                }
+                spells[Spells.Q].CastOnUnit(target, true);
+            }
                 
-                //only kill with ult
-                if (onlyKill && E.IsReady() && rCombo && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
+            if (onlyKill && spells[Spells.E].IsReady() && rCombo && ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(spells[Spells.R].Range)) >= ultCount)
+            {
+                if (comboDamage >= target.Health)
                 {
-                    if (comboDamage >= target.Health)
-                    {
-                        R.Cast(target);
-                    }
-                }
-
-                // When fighting and target can we killed with ult it will ult
-                if (onlyKill && smartUlt)
-                {
-                    if (getUltComboDamage >= target.Health)
-                    {
-                        R.Cast(target);
-                    }
-                }
-
-                //not active
-                if (!onlyKill && E.IsReady() && rCombo &&  ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(R.Range)) >= ultCount)
-                {
-                    R.Cast(target);
-                }
-
-                if (spell.Slot == SpellSlot.E && eCombo && E.IsReady() && Player.Distance(target) <= E.Range)
-                {
-                    E.Cast(target);
-                }
-
-                if (spell.Slot == SpellSlot.W && wCombo && W.IsReady())
-                {
-                    W.Cast(Player);
+                    spells[Spells.R].Cast(target);
                 }
             }
 
+            if (onlyKill && smartUlt)
+            {
+                if (getUltComboDamage >= target.Health)
+                {
+                    spells[Spells.R].Cast(target);
+                }
+            }
+
+            if (!onlyKill && spells[Spells.E].IsReady() && rCombo &&  ObjectManager.Get<Obj_AI_Hero>().Count(hero => hero.IsValidTarget(spells[Spells.R].Range)) >= ultCount)
+            {
+                spells[Spells.R].Cast(target);
+            }
+
+            if (useE && spells[Spells.E].IsReady() && Player.Distance(target) <= spells[Spells.E].Range)
+            {
+                spells[Spells.E].Cast(target);
+            }
+
+            if (useW && spells[Spells.W].IsReady())
+            {
+                spells[Spells.W].Cast(Player);
+            }
+            
             if (Player.Distance(target) <= 600 && IgniteDamage(target) >= target.Health &&
                 _menu.Item("UseIgnite").GetValue<bool>())
             {
@@ -239,28 +244,25 @@ namespace ElVladimir
 
         #region Harass
 
-        private static void Harass(Obj_AI_Base target)
+        private static void Harass()
         {
+            var target = TargetSelector.GetTarget(spells[Spells.Q].Range, TargetSelector.DamageType.Magical);
+
             if (target == null || !target.IsValid)
-            {
                 return;
-            }
 
             var qHarass = _menu.Item("HarassQ").GetValue<bool>();
             var eHarass = _menu.Item("HarassE").GetValue<bool>();
 
-            foreach (var spell in SpellList.Where(y => y.IsReady()))
+            if (qHarass && spells[Spells.Q].IsReady())
             {
-                if (spell.Slot == SpellSlot.Q && qHarass && Q.IsReady())
-                {
-                    Q.Cast(target);
-                }
-
-                if (spell.Slot == SpellSlot.E && eHarass && E.IsReady() && Player.Distance(target) <= E.Range)
-                {
-                    E.Cast(target);
-                }  
+                spells[Spells.Q].Cast(target);
             }
+
+            if (eHarass && spells[Spells.E].IsReady() && Player.Distance(target.ServerPosition) <= spells[Spells.E].Range)
+            {
+                spells[Spells.E].Cast(target);
+            }  
         }
 
         #endregion
@@ -269,21 +271,21 @@ namespace ElVladimir
 
         private static void LaneClear()
         {
-            var minion = MinionManager.GetMinions(Player.ServerPosition, W.Range).FirstOrDefault();
+            var minion = MinionManager.GetMinions(Player.ServerPosition, spells[Spells.W].Range).FirstOrDefault();
             if (minion == null || minion.Name.ToLower().Contains("ward")) return;
 
             var qWaveClear = _menu.Item("WaveClearQ").GetValue<bool>();
             var eWaveClear = _menu.Item("WaveClearE").GetValue<bool>();
 
-            if (qWaveClear && Q.IsReady())
+            if (qWaveClear && spells[Spells.Q].IsReady())
             {
-                Q.CastOnUnit(minion);
+                spells[Spells.Q].CastOnUnit(minion);
             }
 
-            if (eWaveClear && E.IsReady() &&
+            if (eWaveClear && spells[Spells.E].IsReady() &&
                 (Player.Health / Player.MaxHealth) * 100 >= _menu.Item("EStackHP").GetValue<Slider>().Value)
             {
-                E.CastOnUnit(minion);
+                spells[Spells.E].CastOnUnit(minion);
             }  
         }
 
@@ -306,8 +308,8 @@ namespace ElVladimir
         {
             var AntiGapActive = _menu.Item("Antigap").GetValue<bool>();
 
-            if (AntiGapActive && W.IsReady() && gapcloser.Sender.Distance(Player) < 300)
-                W.Cast(Player);
+            if (AntiGapActive && spells[Spells.W].IsReady() && gapcloser.Sender.Distance(Player) < 300)
+                spells[Spells.W].Cast(Player);
         }
 
         #region Drawings
@@ -324,20 +326,20 @@ namespace ElVladimir
                 return;
 
             if (drawQ.Active)
-                if (Q.Level > 0)
-                    Render.Circle.DrawCircle(ObjectManager.Player.Position, Q.Range,Q.IsReady() ? Color.Green : Color.Red);
+                if (spells[Spells.Q].Level > 0)
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, spells[Spells.Q].Range, spells[Spells.Q].IsReady() ? Color.Green : Color.Red);
 
             if (drawW.Active)
-                if (W.Level > 0)
-                    Render.Circle.DrawCircle(ObjectManager.Player.Position, W.Range, W.IsReady() ? Color.Green : Color.Red);
+                if (spells[Spells.W].Level > 0)
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, spells[Spells.W].Range, spells[Spells.W].IsReady() ? Color.Green : Color.Red);
 
             if (drawE.Active)
-                if (E.Level > 0)
-                    Render.Circle.DrawCircle(ObjectManager.Player.Position, E.Range, E.IsReady() ? Color.Green : Color.Red);
+                if (spells[Spells.E].Level > 0)
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, spells[Spells.E].Range, spells[Spells.E].IsReady() ? Color.Green : Color.Red);
 
             if (drawR.Active)
-                if (R.Level > 0)
-                    Render.Circle.DrawCircle(ObjectManager.Player.Position, R.Range, R.IsReady() ? Color.Green : Color.Red);
+                if (spells[Spells.R].Level > 0)
+                    Render.Circle.DrawCircle(ObjectManager.Player.Position, spells[Spells.R].Range, spells[Spells.R].IsReady() ? Color.Green : Color.Red);
         }
 
         #endregion
@@ -346,7 +348,7 @@ namespace ElVladimir
 
         private static void InitializeMenu()
         {
-            _menu = new Menu("ElVladimir", hero, true);
+            _menu = new Menu("ElVladimir", "Vladimir", true);
 
             //Orbwalker
             var orbwalkerMenu = new Menu("Orbwalker", "orbwalker");
@@ -394,12 +396,15 @@ namespace ElVladimir
             waveClearMenu.AddItem(new MenuItem("WaveClearActive", "WaveClear!").SetValue(new KeyBind("V".ToCharArray()[0], KeyBindType.Press)));
 
             //Misc
-            var miscMenu = _menu.AddSubMenu(new Menu("Drawings", "Misc"));
+            var miscMenu = _menu.AddSubMenu(new Menu("Misc", "Misc"));
             miscMenu.AddItem(new MenuItem("ElVladimir.Drawingsoff", "Drawings off").SetValue(false));
             miscMenu.AddItem(new MenuItem("ElVladimir.DrawQ", "Draw Q").SetValue(new Circle()));
             miscMenu.AddItem(new MenuItem("ElVladimir.DrawW", "Draw W").SetValue(new Circle()));
             miscMenu.AddItem(new MenuItem("ElVladimir.DrawE", "Draw E").SetValue(new Circle()));
             miscMenu.AddItem(new MenuItem("ElVladimir.DrawR", "Draw R").SetValue(new Circle()));
+            miscMenu.AddItem(new MenuItem("asffasasfafs", ""));
+            miscMenu.AddItem(new MenuItem("ElVladimir.Lasthit", "Last Hit Key").SetValue(new KeyBind("Z".ToCharArray()[0], KeyBindType.Press)));
+
 
             // Settings
             var settingsMenu = _menu.AddSubMenu(new Menu("Settings", "Settings"));
